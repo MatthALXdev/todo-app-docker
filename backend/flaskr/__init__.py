@@ -25,6 +25,11 @@ def create_app(test_config=None):
     cors.init_app(app)
     jwt.init_app(app)
 
+        # Health check endpoint
+    @app.route('/health')
+    def health_check():
+        return {'status': 'healthy'}, 200
+
     api.register_blueprint(auth_route, url_prefix="/api/v1")
     api.register_blueprint(user_route, url_prefix="/api/v1")
     api.register_blueprint(tag_route, url_prefix="/api/v1")
