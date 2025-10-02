@@ -1,0 +1,187 @@
+services:
+  # ========================================
+  # Traefik Reverse Proxy
+  # ========================================
+  traefik:
+    image: traefik:v3.0
+    container_name: todo-traefik
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8090:8080"  # Dashboard accessible sur port 8090
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - traefik_logs:/var/log/traefik
+    networks:
+      - public_net
+    restart: unless-stopped
+
+  # ========================================
+  # MySQL Database
+  # ========================================
+  mysql:
+    image: mysql:8.0.43
+    container_name: todo-mysql
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - internal_net
+    restart: unless-stopped
+
+  # ========================================
+  # Backend Flask
+  # ========================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: todo-backend
+    env_file:
+      - .env
+    environment:
+      # Override with MySQL service name for Docker network
+      SQLALCHEMY_DATABASE_URI: mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}?charset=utf8mb4
+    expose:
+      - "5000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    networks:
+      - internal_net
+      - public_net
+    restart: unless-stopped
+    command: flask run --host=0.0.0.0 --port=5000 --reload
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`localhost`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.backend.entrypoints=web"
+      - "traefik.http.routers.backend.priority=10"
+      - "traefik.http.services.backend.loadbalancer.server.port=5000"
+      - "traefik.docker.network=todo-public"
+
+  # ========================================
+  # Frontend React + Vite
+  # ========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost/api
+    container_name: todo-frontend
+    expose:
+      - "80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - public_net
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`localhost`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.routers.frontend.priority=1"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+      - "traefik.docker.network=todo-public"
+
+  # ========================================
+  # phpMyAdmin
+  # ========================================
+  phpmyadmin:
+    image: phpmyadmin:5.2
+    container_name: todo-phpmyadmin
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_ABSOLUTE_URI: http://localhost/pma/
+      UPLOAD_LIMIT: 50M
+    expose:
+      - "80"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - internal_net
+      - public_net
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.phpmyadmin.rule=Host(`localhost`) && PathPrefix(`/pma`)"
+      - "traefik.http.routers.phpmyadmin.entrypoints=web"
+      - "traefik.http.routers.phpmyadmin.priority=5"
+      - "traefik.http.services.phpmyadmin.loadbalancer.server.port=80"
+      - "traefik.http.middlewares.phpmyadmin-stripprefix.stripprefix.prefixes=/pma"
+      - "traefik.http.routers.phpmyadmin.middlewares=phpmyadmin-stripprefix"
+      - "traefik.docker.network=todo-public"
+
+  # ========================================
+  # Dozzle - Docker Logs Viewer
+  # ========================================
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: todo-dozzle
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "9999:8080"
+    environment:
+      DOZZLE_LEVEL: info
+      DOZZLE_TAILSIZE: 300
+      DOZZLE_FILTER: "status=running"
+    networks:
+      - public_net
+    restart: unless-stopped
+
+  # ========================================
+  # cAdvisor - Container Metrics
+  # ========================================
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: todo-cadvisor
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    ports:
+      - "8888:8080"
+    networks:
+      - public_net
+    restart: unless-stopped
+
+# ========================================
+# Networks
+# ========================================
+networks:
+  internal_net:
+    name: todo-internal
+    driver: bridge
+  public_net:
+    name: todo-public
+    driver: bridge
+
+# ========================================
+# Volumes
+# ========================================
+volumes:
+  mysql_data:
+    driver: local
+  traefik_logs:
+    driver: local

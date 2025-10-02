@@ -1,191 +1,464 @@
-# TODO App built with Flask and ReactJS
+# 📝 TODO App - Flask + React + Docker
 
-This is an web app with the objective of being able to save your notes and have them stored in a database. The user is able to perform basic actions such as create, read, update and delete this data, a basic CRUD.
+Application web full-stack de gestion de tâches (CRUD) avec authentification JWT, déployée via Docker avec Traefik comme reverse proxy.
 
-## Table of contents
+---
 
-- [Built with](#built-with)
-- [Project requirements and how to use it](#project-requirements-and-how-to-use-it)
-  - [Frontend](#frontend)
-  - [Backend](#backend)
-  - [REST API](#rest-api)
-- [Image gallery](#image-gallery)
-  - [REST API](#rest-api-preview)
-  - [Frontend](#frontend-preview)
+## 📚 Table des matières
 
-## Built with
+- [Technologies utilisées](#-technologies-utilisées)
+- [Architecture Docker](#-architecture-docker)
+- [Prérequis](#-prérequis)
+- [Installation rapide](#-installation-rapide)
+- [Configuration](#️-configuration)
+- [Accès aux services](#-accès-aux-services)
+- [Mode développement vs production](#-mode-développement-vs-production)
+- [Commandes utiles](#-commandes-utiles)
+- [Architecture réseau](#-architecture-réseau)
+- [API REST](#-api-rest)
+- [Monitoring](#-monitoring)
+- [Troubleshooting](#-troubleshooting)
 
-The project was developed from scratch with Frontend and Backend technologies, for the communication between the client and the server I implemented a REST API, which is responsible for returning the necessary data in JSON format to the client:
+---
 
-- Frontend:
-  - ReactJS
-  - TypeScript
-  - TailwindCSS
-  - Axios
-  - ShadcnUI
-  - React Router Dom
-  - React Hook Form
-  - Zustand
-  - React Query
-
-- Backend:
-  - Python (Flask)
-  - SQLite (As database manager)
-  - Flask Migrate (To perform migrations)
-  - SQLAlchemy and Flask SQLAlchemy (Python SQL toolkit and ORM that gives application developers the full power and flexibility of SQL)
-  - REST API (For communication between client and server)
-  - SwaggerUI
-  - Flask Smorest (Used for rest api creation and schema creation)
-  - Flask JWT Extended (For the creation of JWT)
-  - MVC (Software Design Pattern)
-
-## Project requirements and how to use it
-
-For the project you must run both development environments at the same time, both the Frontend and the Backend. In the Frontend you will find JavaScript technologies (ReactJS) and in the Backend you will find Python technologies and tools (Flask), so you must have NodeJS and Python installed on your computer (As a reference this project was developed with version 3.13.0 of Python and 22.11.0 of NodeJS).
-
-I leave you links to NodeJS and Python for installation:
-  - [NodeJS website](https://nodejs.org/en/)
-  - [Python website](https://www.python.org/)
-
-First of all download the project to start using it, do it from the terminal:
-
-```shell
-$ git clone https://github.com/Remy349/todo-app-flask-reactjs.git
-
-$ cd todo-app-flask-reactjs
-```
-
-If you did it correctly and there were no problems, you should see these folders:
-
-```shell
-/backend
-/frontend
-/preview
-README.md
-```
+## 🛠 Technologies utilisées
 
 ### Frontend
-
-If you already have NodeJS installed on your computer perform the following steps to run the Frontend (Remember that the Backend must be running):
-
-1. Move to the `/frontend` folder and run the following command to install the necessary:
-
-```shell
-# This will install what you need for the Frontend (npm comes with NodeJS after installation)
-$ npm install
-```
-
-2. Then you will need to run the following command to start running the Frontend:
-
-```shell
-$ npm run dev
-
-# You will see something like this:
-VITE v5.4.11  ready in 349 ms
-
-  ➜  Local:   http://localhost:5173/
-  ➜  Network: use --host to expose
-  ➜  press h + enter to show help
-```
-
-3. That's all for the Frontend, if you haven't run the Backend yet, continue with the next section (Backend)
+- **React 18** + **TypeScript**
+- **Vite** (build tool)
+- **TailwindCSS** + **ShadcnUI**
+- **Axios** pour les requêtes HTTP
+- **React Router Dom** (navigation)
+- **React Hook Form** + **Zod** (validation)
+- **Zustand** (state management)
+- **React Query** (data fetching)
 
 ### Backend
+- **Python 3.11** + **Flask**
+- **MySQL 8.0.43** (base de données)
+- **SQLAlchemy** (ORM)
+- **Flask-Migrate** (migrations)
+- **Flask-JWT-Extended** (authentification)
+- **Flask-Smorest** (REST API + Swagger)
+- **Gunicorn** (serveur WSGI production)
 
-If you already have Python installed on your computer perform the following steps to run the Backend
+### Infrastructure Docker
+- **Traefik v3.0** (reverse proxy)
+- **phpMyAdmin 5.2** (gestion DB)
+- **Dozzle** (logs temps réel)
+- **cAdvisor** (monitoring conteneurs)
+- **Docker Compose** (orchestration)
 
-1. Move to the `/backend` folder and run the following command to create a virtual development environment with Python:
+---
 
-```shell
-# If it doesn't work this way try "python3", this will depend on how you installed Python on your computer
-$ python -m venv venv
+## 🏗 Architecture Docker
+
+```
+┌─────────────────────────────────────────────────┐
+│              Traefik (Port 80)                  │
+│         Reverse Proxy & Load Balancer           │
+└────┬──────────────────────┬──────────────────┬──┘
+     │                      │                  │
+     ▼                      ▼                  ▼
+┌─────────┐         ┌──────────────┐    ┌──────────┐
+│Frontend │         │   Backend    │    │   PMA    │
+│ (React) │         │   (Flask)    │    │ (/pma)   │
+│   (/)   │         │   (/api)     │    └────┬─────┘
+└─────────┘         └──────┬───────┘         │
+                           │                 │
+                    ┌──────┴─────────────────┘
+                    ▼
+              ┌──────────┐
+              │  MySQL   │
+              │  (3306)  │
+              └──────────┘
+
+Monitoring:
+┌──────────┐  ┌───────────┐
+│  Dozzle  │  │ cAdvisor  │
+│  :9999   │  │   :8888   │
+└──────────┘  └───────────┘
 ```
 
-2. Now activate the development environment and install the necessary requirements found in the `requirements.txt` file:
+---
 
-```shell
-# This is how it is done in Linux, in Windows it is as follows "venv\Scripts\activate"
-$ . venv/bin/activate
-# Now install the necessary requirements using "pip" or "pip3",
-# this will depend on how you installed Python on your computer
-(venv) $ pip install -r requirements.txt
+## ✅ Prérequis
+
+- **Docker** (version 20.10+)
+- **Docker Compose** (version 2.0+)
+- **Git**
+
+### Installation Docker
+
+**Windows** : [Docker Desktop](https://www.docker.com/products/docker-desktop)
+**macOS** : [Docker Desktop](https://www.docker.com/products/docker-desktop)
+**Linux** :
+```bash
+curl -fsSL https://get.docker.com -o get-docker.sh
+sh get-docker.sh
 ```
 
-3. Create an .env file and add an environment variable for JWT creation:
+---
 
-```shell
-# This is an example
-JWT_SECRET_KEY="c7d57142e46f169ce9dbeb8d96603e46"
+## 🚀 Installation rapide
+
+### 1. Cloner le projet
+
+```bash
+git clone https://github.com/Remy349/todo-app-flask-reactjs.git
+cd todo-app-flask-reactjs
 ```
 
-4. Now you can start running the server:
+### 2. Copier les fichiers d'environnement
 
-```shell
-(venv) $ flask run
-
-# You will see something like this:
-* Serving Flask app 'application.py'
- * Debug mode: on
-WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
- * Running on http://127.0.0.1:5000
-Press CTRL+C to quit
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 140-954-082
+```bash
+# Fichier .env racine (déjà configuré)
+# Pas besoin de modification pour le développement local
 ```
 
-5. Visit the path where the Swagger interface is located to see all the api endpoints:
+### 3. Lancer la stack Docker
 
-`http://localhost:5000/docs`
-
-With this you will have your Python environment ready to work, it also has a database so you don't have to worry about that and it already has some data already entered so you can interact with the REST API.
-
-But if you want to start blank with no previously stored data delete the database and run the following command to create a new database (This step is optional):
-
-```shell
-# This will create a new database with the necessary tables to store the data 
-# if you want to know the table structure have a look at the "/flaskr/models" folder.
-(venv) $ flask db upgrade
+```bash
+docker compose up -d
 ```
 
-After you have done the previous step add some default data for the task labels. Do this by running the following command in the terminal:
+**Attendez 1-2 minutes** que tous les services démarrent (healthchecks).
 
-```shell
-python seed.py
+### 4. Initialiser la base de données
+
+```bash
+# Créer les tables
+docker compose exec backend flask db upgrade
+
+# Insérer les tags par défaut (20 catégories)
+docker compose exec backend python seed.py
 ```
 
-### REST API
+### 5. Accéder à l'application
 
-Everything related to the API is inside `flaskr/routes`. The following table summarizes the routes that were implemented:
+Ouvrez votre navigateur : **http://localhost/**
 
-| HTTP Method | Resource URL            | Notes                                   |
-| ----------- | ----------------------- | --------------------------------------- |
-| `POST`      | */api/v1/auth/sign-in*  | Auth user and create JWT                |
-| `GET`       | */api/v1/users*         | Get a list of all users                 |
-| `POST`      | */api/v1/users*         | Create a new user                       |
-| `GET`       | */api/v1/users/id*      | Get a single user by id                 |
-| `DELETE`    | */api/v1/users/account* | Delete a user account                   |
-| `GET`       | */api/v1/tags*          | Get a list of tags                      |
-| `POST`      | */api/v1/tags*          | Create a new tag                        |
-| `POST`      | */api/v1/tasks*         | Create a new task                       |
-| `GET`       | */api/v1/tasks/user*    | Get a list of all tasks on user         |
-| `PUT`       | */api/v1/tasks/id*      | Update a task                           |
-| `DELETE`    | */api/v1/tasks/id*      | Delete a task                           |
+---
 
-## Image gallery
+## ⚙️ Configuration
 
-### REST API Preview:
+### Fichier `.env` (racine du projet)
 
-![PREVIEW](./preview/preview1.png)
-![PREVIEW](./preview/preview2.png)
+```env
+# MySQL
+MYSQL_DATABASE=todo_db
+MYSQL_USER=todo_user
+MYSQL_PASSWORD=todo_pass
+MYSQL_ROOT_PASSWORD=root_pass
 
-### Frontend Preview
+# Backend Flask
+FLASK_ENV=development
+FLASK_APP=application.py
+JWT_SECRET_KEY=supersecret
 
-![PREVIEW](./preview/preview3.png)
-![PREVIEW](./preview/preview4.png)
-![PREVIEW](./preview/preview5.png)
-![PREVIEW](./preview/preview6.png)
-![PREVIEW](./preview/preview7.png)
-![PREVIEW](./preview/preview8.png)
+# Frontend
+VITE_API_URL=http://localhost/api
+```
 
-### Developed by Santiago de Jesús Moraga Caldera - Remy349(GitHub)
+### Fichier `config.yml`
+
+Configuration centralisée de la stack (versions, ports, réseaux, etc.).
+
+---
+
+## 🌐 Accès aux services
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| **Frontend** | http://localhost/ | - |
+| **Backend API** | http://localhost/api/v1/tags | - |
+| **Swagger UI** | http://localhost:5000/docs | (Accès direct backend, dev only) |
+| **phpMyAdmin** | http://localhost/pma/ | `todo_user` / `todo_pass` |
+| **Traefik Dashboard** | http://localhost:8090/dashboard/ | - |
+| **Dozzle (Logs)** | http://localhost:9999/ | - |
+| **cAdvisor (Metrics)** | http://localhost:8888/ | - |
+
+---
+
+## 🔄 Mode développement vs production
+
+### Mode développement (actuel)
+
+```yaml
+backend:
+  command: flask run --host=0.0.0.0 --reload  # Hot-reload activé
+  volumes:
+    - ./backend:/app  # Code monté en volume
+```
+
+**Caractéristiques** :
+- ✅ Hot-reload automatique (backend)
+- ✅ Logs détaillés
+- ✅ Swagger UI accessible
+- ❌ Pas de HTTPS
+
+### Mode production
+
+**Modifications à effectuer dans `.env`** :
+
+```env
+FLASK_ENV=production
+JWT_SECRET_KEY=<générer_une_clé_aléatoire_32+_caractères>
+MYSQL_PASSWORD=<mot_de_passe_fort>
+MYSQL_ROOT_PASSWORD=<mot_de_passe_fort>
+```
+
+**Dans `config.yml`** :
+```yaml
+proxy:
+  ssl_enabled: true
+  domain: "votredomaine.com"
+```
+
+**Dans `docker-compose.yml`** :
+```yaml
+backend:
+  command: gunicorn --bind 0.0.0.0:5000 --workers 4 application:app
+  volumes: []  # Retirer le volume de développement
+```
+
+---
+
+## 📝 Commandes utiles
+
+### Gestion de la stack
+
+```bash
+# Démarrer tous les services
+docker compose up -d
+
+# Arrêter tous les services
+docker compose down
+
+# Arrêter + supprimer volumes (⚠️ perte de données)
+docker compose down -v
+
+# Voir les logs en temps réel
+docker compose logs -f
+
+# Voir les logs d'un service spécifique
+docker compose logs -f backend
+
+# Redémarrer un service
+docker compose restart backend
+
+# Rebuilder les images
+docker compose build --no-cache
+
+# Voir l'état des services
+docker compose ps
+```
+
+### Base de données
+
+```bash
+# Créer une migration
+docker compose exec backend flask db migrate -m "Description"
+
+# Appliquer les migrations
+docker compose exec backend flask db upgrade
+
+# Accéder à MySQL CLI
+docker compose exec mysql mysql -u todo_user -ptodo_pass todo_db
+
+# Backup de la base de données
+docker compose exec mysql mysqldump -u root -proot_pass todo_db > backup.sql
+
+# Restore de la base de données
+docker compose exec -T mysql mysql -u root -proot_pass todo_db < backup.sql
+```
+
+### Développement backend
+
+```bash
+# Installer une nouvelle dépendance Python
+docker compose exec backend pip install <package>
+docker compose exec backend pip freeze > backend/requirements.txt
+docker compose build backend
+
+# Accéder au shell Python
+docker compose exec backend python
+```
+
+---
+
+## 🌐 Architecture réseau
+
+### Réseaux Docker
+
+**`todo-public`** : Communication entre Traefik, frontend, backend, phpMyAdmin
+**`todo-internal`** : Communication privée entre MySQL, backend, phpMyAdmin
+
+### Isolation
+
+- ✅ MySQL **n'est PAS** accessible depuis l'extérieur via Traefik
+- ✅ Seuls backend et phpMyAdmin peuvent communiquer avec MySQL
+- ✅ Traefik route uniquement le trafic HTTP vers les services exposés
+
+---
+
+## 🔌 API REST
+
+### Endpoints disponibles
+
+| Méthode | URL | Description | Auth JWT |
+|---------|-----|-------------|----------|
+| `POST` | `/api/v1/auth/sign-in` | Authentification utilisateur | ❌ |
+| `POST` | `/api/v1/users` | Créer un compte | ❌ |
+| `GET` | `/api/v1/users` | Liste des utilisateurs | ✅ |
+| `GET` | `/api/v1/users/{id}` | Détails utilisateur | ✅ |
+| `DELETE` | `/api/v1/users/account` | Supprimer son compte | ✅ |
+| `GET` | `/api/v1/tags` | Liste des tags | ❌ |
+| `POST` | `/api/v1/tags` | Créer un tag | ✅ |
+| `GET` | `/api/v1/tasks/user` | Mes tâches | ✅ |
+| `POST` | `/api/v1/tasks` | Créer une tâche | ✅ |
+| `PUT` | `/api/v1/tasks/{id}` | Modifier une tâche | ✅ |
+| `DELETE` | `/api/v1/tasks/{id}` | Supprimer une tâche | ✅ |
+
+### Exemple d'utilisation
+
+```bash
+# Créer un compte
+curl -X POST http://localhost/api/v1/users \
+  -H "Content-Type: application/json" \
+  -d '{"username":"john","email":"john@example.com","password":"password123"}'
+
+# Se connecter
+curl -X POST http://localhost/api/v1/auth/sign-in \
+  -H "Content-Type: application/json" \
+  -d '{"email":"john@example.com","password":"password123"}'
+
+# Récupérer les tags
+curl http://localhost/api/v1/tags
+```
+
+---
+
+## 📊 Monitoring
+
+### Dozzle - Logs Docker
+
+- **URL** : http://localhost:9999
+- **Fonctionnalités** :
+  - Visualisation des logs en temps réel
+  - Recherche et filtrage
+  - Multi-conteneurs
+
+### cAdvisor - Métriques
+
+- **URL** : http://localhost:8888
+- **Métriques** :
+  - CPU usage
+  - Mémoire (RAM)
+  - Network I/O
+  - Disk I/O
+
+---
+
+## 🔧 Troubleshooting
+
+### Les services ne démarrent pas
+
+```bash
+# Vérifier les logs
+docker compose logs
+
+# Vérifier l'état
+docker compose ps
+
+# Recréer les conteneurs
+docker compose down
+docker compose up -d --force-recreate
+```
+
+### Erreur "network not found"
+
+```bash
+# Nettoyer les réseaux orphelins
+docker network prune -f
+
+# Redémarrer
+docker compose up -d
+```
+
+### Frontend affiche 404
+
+```bash
+# Vérifier que le healthcheck est OK
+docker compose ps frontend
+
+# Rebuilder le frontend
+docker compose build frontend
+docker compose up -d frontend
+```
+
+### Backend ne peut pas se connecter à MySQL
+
+```bash
+# Vérifier que MySQL est healthy
+docker compose ps mysql
+
+# Vérifier la variable d'environnement
+docker compose exec backend env | grep SQLALCHEMY
+```
+
+### Réinitialiser complètement la stack
+
+```bash
+docker compose down -v
+docker system prune -a --volumes -f
+docker compose up -d --build
+```
+
+---
+
+## 📦 Structure du projet
+
+```
+todo-app-flask-reactjs/
+├── backend/
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   ├── application.py
+│   ├── config.py
+│   ├── seed.py
+│   └── flaskr/
+│       ├── __init__.py
+│       ├── models/
+│       ├── controllers/
+│       ├── routes/
+│       └── schemas/
+├── frontend/
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── src/
+│       ├── config/
+│       ├── routes/
+│       ├── services/
+│       └── components/
+├── docker-compose.yml
+├── traefik.yml
+├── config.yml
+├── .env
+└── README.md
+```
+
+---
+
+## 👨‍💻 Auteurs
+
+**Développement original** : Santiago de Jesús Moraga Caldera - [Remy349](https://github.com/Remy349)
+**Dockerisation & Architecture** : Matthieu Alix - [MatthALXdev](https://github.com/MatthALXdev)
+
+---
+
+## 📄 Licence
+
+Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.

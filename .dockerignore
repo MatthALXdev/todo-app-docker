@@ -1,0 +1,24 @@
+# Backend
+backend/__pycache__/
+backend/*.pyc
+backend/.env
+backend/data.db
+backend/migrations/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Docs
+*.md
+checklist.md

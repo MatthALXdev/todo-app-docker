@@ -1,0 +1,32 @@
+# ==============================
+# Traefik Static Configuration
+# ==============================
+
+# API and Dashboard
+api:
+  dashboard: true
+  insecure: true  # Allow HTTP access to dashboard (dev only)
+
+# Entry Points
+entryPoints:
+  web:
+    address: ":80"
+
+  # Uncomment for HTTPS in production
+  # websecure:
+  #   address: ":443"
+
+# Providers
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false  # Only expose services with traefik.enable=true
+    network: todo-public  # Use public network for routing
+
+# Logs
+log:
+  level: INFO
+
+# Access Logs
+accessLog:
+  filePath: "/var/log/traefik/access.log"

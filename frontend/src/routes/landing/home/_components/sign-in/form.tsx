@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { SignInFormSchema, TSignInFormSchema } from "@/schemas/auth-schema";
 import { useAuthStore } from "@/stores/auth-store";
 import { zodResolver } from "@hookform/resolvers/zod";
-import axios, { AxiosError } from "axios";
+import { AxiosError } from "axios";
+import { apiClient } from "@/config/api";
 import { LoaderCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
@@ -33,8 +34,8 @@ export const SignInForm = () => {
 
   const onSubmit = async (formData: TSignInFormSchema) => {
     try {
-      const response = await axios.post(
-        "http://localhost:5000/api/v1/auth/sign-in",
+      const response = await apiClient.post(
+        "/v1/auth/sign-in",
         formData,
       );
 
