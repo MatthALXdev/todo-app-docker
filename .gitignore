@@ -2,6 +2,10 @@
 .env
 backend/.env
 frontend/.env
+config.yml
+.env.example
+checklist.md
+.claude/
 
 # Python
 __pycache__/

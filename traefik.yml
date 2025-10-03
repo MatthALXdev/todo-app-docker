@@ -12,10 +12,6 @@ entryPoints:
   web:
     address: ":80"
 
-  # Uncomment for HTTPS in production
-  # websecure:
-  #   address: ":443"
-
 # Providers
 providers:
   docker:

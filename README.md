@@ -105,7 +105,7 @@ sh get-docker.sh
 ### 1. Cloner le projet
 
 ```bash
-git clone https://github.com/Remy349/todo-app-flask-reactjs.git
+git clone https://github.com/MatthALXdev/todo-app-docker.git
 cd todo-app-flask-reactjs
 ```
 
